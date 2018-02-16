@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script><!--jquery implementation is uneeded at this point, but will be helpful when polishing the interface.-->
+    <meta charset="utf-8">
+    <title>Pong!</title>
+    <style>
+    canvas {
+        opacity:0;
+        padding: 0;
+        margin: auto;
+        display: block;
+        width: 800px;
+        height: 600px;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        transition: opacity 3s ease-in;}
+    </style>
+</head>
+<body style="background-color: black;" id="body">
+    <div id="ccc">
+        <canvas onclick="clicked();" id="c" width="800" height = "600" style="background-color: black; border:3px solid grey;"/>
+    </div>
+    <center><p id="xxx" style="color: grey;opacity:0;transition: opacity 2s ease-in;">Click inside the Pong Game to begin the match. You are Player 1. Control the paddle with your mouse.</p></center>
+    <script>
+        fps = 60;
+        var c, cc;
+        c = document.getElementById('c');
+        cc = c.getContext('2d');
+        $("#ccc canvas").css("opacity","1");//fade in the gameboard.
+        $("#xxx").css("opacity","1");//fade in the instructional text.
+        cc.font = "30px Arial";
+        reset();
+        
+        function reset(){
+            ending=100;
+            going = 0;
+            ball = {};
+            game = {};
+            paddle1 = {};
+            paddle1.y = 300;
+            paddle1.score = 0;
+            paddle2 = {};
+            paddle2.y = 300;
+            paddle2.score = 0;
+            paddle2.goaly = 300;
+            ball.size = 8;
+            ball.x = 400;
+            ball.y = 300;
+            ball.sx = 1.15;
+            ball.sy = (Math.random()*4);
+            if (ball.sy <1){ball.sy = 1;}
+            if (ball.sy >2.5){ball.sy = 2.5;}
+            if(Math.random() >.5){ball.sy = ball.sy*-1;}
+            dead_time = 0;
+            dying=0;
+            for (i = 0; i < 5; i++) {clear();}
+            game_render();
+            clear();}
+        
+        function clicked(){//function to test if the game is already going.
+            if (going == 0){
+                going=1;
+                start_game();}}
+        
+        function start_game(){
+            running = setInterval(game_render,1000/fps);
+            running1 = setInterval(update,20);
+            running2 = setInterval(dif,250);}//change this value to adjust at what speed the difficulty increases.
+        
+        function stop_render(){
+            clearInterval(running);
+            game_over();}
+        
+        function stop_game(){//stop the game m
+            clearInterval(running1);
+            clearInterval(running2);}
+        
+        function dif(){
+            ball.sx = ball.sx * 1.01;
+            if(Math.random() >.08){ball.sy = ball.sy * 1.007}}//this line gives a 20% change to increase side to side motion of the ball by .7%.
+        
+        function update(){//this function runs the updates and collision checks multiple times in one move, to ensure that the ball doesnt "skip" the collision check.
+            for (i = 0; i < 4; i++) {//run the following 3 lines 4 times, for every time this function is called.
+                update_ball();
+                update_ai_paddle();//update location of ai paddle.
+                ball_col();}}//check for ball collisions with the paddles.
+        
+        function update_ball(){//update the balls position, and handle bouncing off the walls.
+            ball.x = ball.x + (ball.sx);
+            ball.y = ball.y + (ball.sy);
+            if(ball.y<17){ball.sy = ball.sy * -1;}
+            if(ball.y>599){ball.sy = ball.sy * -1;}}
+        
+        function ball_col(){//this functions checks if the ball has reached the line where the paddle(s) are, then checks if the ball has hit the paddle,
+            if(ball.x <210){// if it has not, then it initiates the game over sequence.
+                if (ball.y > (paddle1.y - 30) && ball.y < (paddle1.y+41)){
+                    paddle1.score +=1;
+                    ball.sx = ball.sx * -1;
+                    ball.x = ball.x + ball.sx;
+                } else{
+                    dead_time = 100;
+                    stop_game();}}
+            if(ball.x >590){
+                if (ball.y > (paddle2.y - 30) && ball.y < (paddle2.y+41)){
+                    paddle2.score +=1;
+                    ball.sx = ball.sx * -1;
+                    ball.x = ball.x + ball.sx;
+                } else{
+                    dead_time = 100;
+                    stop_game();}}}
+        
+        function game_render(){
+            if (dead_time >0){//check if we are rendering after the game is over.
+                dying=1;
+                dead_time = dead_time - 1;
+                dead_time = dead_time - 1;
+                update_ball();
+            } else{if (dying==1){stop_render();}}
+            clear();
+            draw_line();
+            draw_paddle1();
+            draw_paddle2();
+            draw_ball();
+            draw_score();}
+        
+        function game_over(){
+            checkCookie();
+            if (ball.x>500){
+                document.getElementById("body").innerHTML = "<center><h1 style='color:white;'>You Won!</h1><h1 style='color:white;'>Your Score: "+paddle1.score+"</h1><p> </p> <p style='color:white;'>loading rankings.</p></center>"
+                window.setTimeout(function(){window.location.href = "leaderboard.php?name="+user+"&score="+paddle1.score},6000);//after 6 seconds, redirect the page to show recent scores.
+            } else{
+                document.getElementById("body").innerHTML = "<center><h1 style='color:white;'>You Lost.</h1><h1 style='color:white;'>Your Score: "+paddle1.score+"</h1><p> </p> <p style='color:white;'>loading rankings.</p></center>"
+                window.setTimeout(function(){window.location.href = "leaderboard.php?name="+user+"&score="+paddle1.score},6000);}}//after 6 seconds, redirect the page to show recent scores.
+        
+        function draw_score(){
+            cc.fillText("Player 1: "+paddle1.score,20,50);
+            cc.fillText("Player 2: "+paddle2.score,625,50);}
+        
+        function draw_line(){
+            cc.strokeStyle="grey";
+            cc.setLineDash([5, 3]);/*dashes are 5px and spaces are 3px*/
+            cc.beginPath();
+            cc.moveTo(400,0);
+            cc.lineTo(400, 600);
+            cc.stroke();}
+        
+        function update_ai_paddle(){
+            if (ball.sx > 0){//if the ball is moving towards us, use predictive analysis to move the paddle.
+			ball.fx = ball.x;
+            ball.fy = ball.y;
+            ball.fsy = ball.sy;
+            ball.fsx = ball.sx;
+            while(ball.fx < 590){update_fball();}
+            goaly = ball.fy;
+            distance = (590 - ball.x);
+            if (ball.fx<300){//keep the target location from sitting still for long, in a way that is somewhat human. this runs while the ball is moving away.
+                goaly=goaly+distance/4;
+            }else{goaly=goaly-distance/4;}
+            } else{goaly=ball.y;}//when moving away, track the ball, like a human would.
+            for(i=0;i<5;i++){//to prevent jumpiness, move one pixel at a time, then recheck that we still need to move further.
+                if (goaly > paddle2.y){paddle2.y +=1;}
+                if (goaly < paddle2.y){paddle2.y -=1;}}
+            if(paddle2.y<35){paddle2.y=35;}
+            if(paddle2.y>575){paddle2.y=575;}}
+        
+        function update_fball(){
+            ball.fx = ball.fx + (ball.fsx);
+            ball.fy = ball.fy + (ball.fsy);
+            if(ball.fy<17){ball.fsy = ball.fsy * -1;}
+            if(ball.fy>599){ball.fsy = ball.fsy * -1;}}
+        
+        function draw_paddle2(){
+            cc.fillStyle = "white";
+            cc.fillRect(590,paddle2.y-25,10,40);}
+        
+        function draw_paddle1(){
+            cc.fillStyle = "white";
+            cc.fillRect(190,paddle1.y-25,10,40);}
+        
+        function clear(){
+            cc.fillStyle = "black";
+            cc.globalAlpha = 0.65;
+            cc.fillRect(0,0,c.width,c.height);
+            cc.globalAlpha = 1;}
+        
+        function draw_ball(){
+            cc.beginPath();
+            cc.arc(ball.x-5,ball.y-5, ball.size, 0, Math.PI*2);
+            cc.fillStyle = "white";
+            cc.fill();
+            cc.closePath();}
+        
+        function update_mouse_pos(e) {//we use 2 functions rather than 1, because this will allow more flexibility when expanding later on.
+            var pos = getMousePos(c, e);
+            posy = pos.y;
+            if (posy > 575){posy = 575;}
+            if (posy < 35){posy = 35;}
+            paddle1.y = posy;}
+        
+        window.addEventListener('mousemove', update_mouse_pos, false);//whenever the mouse moves, we want to know, and update the position.
+        function getMousePos(canvas, evt) {
+            var rect = canvas.getBoundingClientRect();
+            return {
+                x: (evt.clientX - rect.left) / (rect.right - rect.left) * canvas.width,
+                y: (evt.clientY - rect.top) / (rect.bottom - rect.top) * canvas.height};}
+
+        function setCookie(cname,cvalue,exdays) {//save the value to a cookie in a file.
+            var d = new Date();
+            d.setTime(d.getTime() + (exdays*24*60*60*1000));
+            var expires = "expires=" + d.toGMTString();
+            document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";}
+
+        function getCookie(cname) {//try to retrieve a value from a cookie.
+            var name = cname + "=";
+            var decodedCookie = decodeURIComponent(document.cookie);
+            var ca = decodedCookie.split(';');
+            for(var i = 0; i < ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) == ' ') {c = c.substring(1);}
+                if (c.indexOf(name) == 0) {return c.substring(name.length, c.length);}}
+            return "";}
+        
+        function checkCookie() {//check if the user's name has been stored in a cookie, which it will be if the game has been played in the last 30 mins.
+            user=getCookie("username");
+            if (user == "") {
+                user = prompt("Please enter your name:","");
+                if (user != "" && user != null) {setCookie("username", user, .02);}}}//Use a cookie to remember your name for up to roughly 30 mins.
+</script>
+</body>
+</html>
